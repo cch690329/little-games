@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>數學挑戰王</title>
+    <style>
+        /* 基礎設定：防止 iOS 橡皮筋回彈與字體縮放 */
+        * {
+            box-sizing: border-box;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f5f7fa;
+            margin: 0;
+            padding: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* 遊戲主容器：固定最大寬度，確保在 iPad/iPhone 畫面穩定 */
+        .game-container {
+            width: 100%;
+            max-width: 500px;
+            background-color: #ffffff;
+            border-radius: 16px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            padding: 20px;
+            text-align: center;
+            /* 固定高度區間，防止內容收合導致頁面晃動 */
+            min-height: 580px; 
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+        }
+
+        /* 標題與文字樣式：粗體、清晰、不花俏 */
+        h1 {
+            font-size: 24px;
+            font-weight: 900;
+            color: #1a1a1a;
+            margin: 0 0 15px 0;
+        }
+        h2 {
+            font-size: 20px;
+            font-weight: 800;
+            color: #2c3e50;
+            margin: 10px 0;
+        }
+        p, label, span {
+            font-weight: 700;
+            color: #333333;
+        }
+
+        /* 穩定排版用的資訊列 */
+        .info-bar {
+            display: flex;
+            justify-content: space-between;
+            background-color: #eef2f7;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            height: 44px;
+            align-items: center;
+        }
+
+        /* 主選單：15個選項按鈕排版 */
+        .menu-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+            max-height: 480px;
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+        @media (min-width: 400px) {
+            .menu-grid {
+                grid-template-columns: 1fr 1fr; /* 平板或大手機雙欄排版 */
+            }
+        }
+
+        /* 按鈕通用樣式 */
+        .btn {
+            background-color: #007aff; /* iOS 經典藍 */
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 14px 10px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .btn:active {
+            background-color: #0056b3;
+        }
+        .btn-menu {
+            background-color: #34c759; /* 綠色代表選單 */
+        }
+        .btn-menu:active {
+            background-color: #248a3d;
+        }
+
+        /* 遊戲進行區域：固定高度防止答題時畫面移位 */
+        .quiz-area {
+            height: 140px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .question-text {
+            font-size: 36px;
+            font-weight: 900;
+            letter-spacing: 2px;
+            margin-bottom: 10px;
+        }
+
+        /* 答案輸入與提交 */
+        .input-area {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            height: 50px;
+        }
+        .answer-input {
+            width: 120px;
+            font-size: 24px;
+            font-weight: 700;
+            text-align: center;
+            border: 3px solid #ccc;
+            border-radius: 10px;
+            outline: none;
+            -moz-appearance: textfield;
+        }
+        .answer-input::-webkit-outer-spin-button,
+        .answer-input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        .answer-input:focus {
+            border-color: #007aff;
+        }
+
+        /* 結算畫面與錯題清單 */
+        .result-area {
+            text-align: left;
+            background: #fff;
+            padding: 5px;
+        }
+        .result-title {
+            text-align: center;
+            font-size: 22px;
+            color: #ff3b30;
+            margin-bottom: 15px;
+        }
+        .wrong-list {
+            max-height: 180px;
+            overflow-y: auto;
+            background-color: #fef2f2;
+            border: 1px solid #fee2e2;
+            border-radius: 8px;
+            padding: 10px 15px;
+            margin-bottom: 20px;
+        }
+        .wrong-item {
+            color: #d63031;
+            font-weight: 700;
+            margin-bottom: 5px;
+            font-size: 15px;
+        }
+        .action-btns {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .action-btns .btn {
+            flex: 1;
+        }
+
+        /* 隱藏區塊用 */
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+
+<div class="game-container">
+    <div id="menu-view">
+        <h1>數學挑戰王</h1>
+        <p style="margin-bottom: 15px; color: #666;">請選擇遊戲內容 (共25題)</p>
+        <div class="menu-grid">
+            <button class="btn" onclick="startGame(1)">個位數的加法</button>
+            <button class="btn" onclick="startGame(2)">個位數的減法</button>
+            <button class="btn" onclick="startGame(3)">2位與1位數加法</button>
+            <button class="btn" onclick="startGame(4)">2位與1位數減法</button>
+            <button class="btn" onclick="startGame(5)">3個個位數連加</button>
+            <button class="btn" onclick="startGame(6)">2個2位數的加法</button>
+            <button class="btn" onclick="startGame(7)">九九乘法表 2 的練習</button>
+            <button class="btn" onclick="startGame(8)">九九乘法表 3 的練習</button>
+            <button class="btn" onclick="startGame(9)">九九乘法表 4 的練習</button>
+            <button class="btn" onclick="startGame(10)">九九乘法表 5 的練習</button>
+            <button class="btn" onclick="startGame(11)">九九乘法表 6 的練習</button>
+            <button class="btn" onclick="startGame(12)">九九乘法表 7 的練習</button>
+            <button class="btn" onclick="startGame(13)">九九乘法表 8 的練習</button>
+            <button class="btn" onclick="startGame(14)">九九乘法表 9 的練習</button>
+            <button class="btn" onclick="startGame(15)">九九乘法表 隨機出題</button>
+        </div>
+    </div>
+
+    <div id="game-view" class="hidden">
+        <div class="info-bar">
+            <div>題號: <span id="current-question-idx">1</span> / 25</div>
+            <div>時間: <span id="timer-text">0秒</span></div>
+        </div>
+        
+        <div class="quiz-area">
+            <div class="question-text" id="question-display">5 + 3 = ?</div>
+        </div>
+
+        <div class="input-area">
+            <input type="number" inputmode="numeric" pattern="[0-9]*" id="answer-input" class="answer-input" placeholder="答案">
+            <button class="btn" onclick="submitAnswer()" style="padding: 0 20px;">確定</button>
+        </div>
+    </div>
+
+    <div id="result-view" class="hidden">
+        <h2 class="result-title">🎉 挑戰結束 🎉</h2>
+        <div class="result-area">
+            <p>🎯 遊戲得分：<span id="final-score" style="color:#007aff; font-size:20px;">0</span> 分</p>
+            <p>⏱️ 消耗時間：<span id="final-time">0</span></p>
+            
+            <p style="margin-top:15px; margin-bottom:5px;">❌ 答錯題目紀錄：</p>
+            <div class="wrong-list" id="wrong-questions-container">
+                </div>
+
+            <div class="action-btns">
+                <button class="btn" onclick="restartGame()">再玩一次</button>
+                <button class="btn btn-menu" onclick="backToMenu()">回主選單</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 遊戲狀態變數
+    let currentMode = 1;
+    let currentQuestionNum = 1;
+    let score = 0;
+    let startTime = null;
+    let timerInterval = null;
+    let currentCorrectAnswer = 0;
+    let wrongQuestionsList = []; // 存放錯題字串
+
+    const TOTAL_QUESTIONS = 25;
+
+    // 取得 DOM 元素
+    const menuView = document.getElementById('menu-view');
+    const gameView = document.getElementById('game-view');
+    const resultView = document.getElementById('result-view');
+    const questionDisplay = document.getElementById('question-display');
+    const answerInput = document.getElementById('answer-input');
+    const currentQuestionIdxSpan = document.getElementById('current-question-idx');
+    const timerTextSpan = document.getElementById('timer-text');
+    const finalScoreSpan = document.getElementById('final-score');
+    const finalTimeSpan = document.getElementById('final-time');
+    const wrongQuestionsContainer = document.getElementById('wrong-questions-container');
+
+    // 監聽 Enter 鍵方便送出
+    answerInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            submitAnswer();
+        }
+    });
+
+    // 開始遊戲
+    function startGame(mode) {
+        currentMode = mode;
+        currentQuestionNum = 1;
+        score = 0;
+        wrongQuestionsList = [];
+        
+        // 切換畫面
+        menuView.classList.add('hidden');
+        resultView.classList.add('hidden');
+        gameView.classList.remove('hidden');
+
+        // 初始化時間
+        startTime = Date.now();
+        updateTimer();
+        timerInterval = setInterval(updateTimer, 1000);
+
+        // 出第一題
+        generateQuestion();
+    }
+
+    // 更新計時器
+    function updateTimer() {
+        const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
+        timerTextSpan.innerText = elapsedSeconds + '秒';
+    }
+
+    // 產生題目核心邏輯
+    function generateQuestion() {
+        answerInput.value = '';
+        currentQuestionIdxSpan.innerText = currentQuestionNum;
+        
+        let num1, num2, num3;
+        let questionStr = '';
+
+        // 輔助函式：取得隨機整數 [min, max]
+        function getRandom(min, max) {
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+
+        switch(currentMode) {
+            case 1: // 個位數的加法
+                num1 = getRandom(1, 9);
+                num2 = getRandom(1, 9);
+                currentCorrectAnswer = num1 + num2;
+                questionStr = `${num1} + ${num2} = ?`;
+                break;
+            case 2: // 個位數的減法 (不為負數)
+                num1 = getRandom(1, 9);
+                num2 = getRandom(1, num1); // 確保減數不大於被減數
+                currentCorrectAnswer = num1 - num2;
+                questionStr = `${num1} - ${num2} = ?`;
+                break;
+            case 3: // 2位數與1位數的加法
+                num1 = getRandom(10, 99);
+                num2 = getRandom(1, 9);
+                currentCorrectAnswer = num1 + num2;
+                questionStr = `${num1} + ${num2} = ?`;
+                break;
+            case 4: // 2位數與1位數的減法 (不可能為負數)
+                num1 = getRandom(10, 99);
+                num2 = getRandom(1, 9);
+                currentCorrectAnswer = num1 - num2;
+                questionStr = `${num1} - ${num2} = ?`;
+                break;
+            case 5: // 3個個位數字的連加計算
+                num1 = getRandom(1, 9);
+                num2 = getRandom(1, 9);
+                num3 = getRandom(1, 9);
+                currentCorrectAnswer = num1 + num2 + num3;
+                questionStr = `${num1} + ${num2} + ${num3} = ?`;
+                break;
+            case 6: // 2個2位數的加法
+                num1 = getRandom(10, 99);
+                num2 = getRandom(10, 99);
+                currentCorrectAnswer = num1 + num2;
+                questionStr = `${num1} + ${num2} = ?`;
+                break;
+            // 7-14: 九九乘法表指定數字
+            case 7: case 8: case 9: case 10: case 11: case 12: case 13: case 14:
+                num1 = currentMode - 5; // 對應 2 到 9 的乘法表
+                num2 = getRandom(1, 9);
+                currentCorrectAnswer = num1 * num2;
+                questionStr = `${num1} × ${num2} = ?`;
+                break;
+            case 15: // 九九乘法表隨機出題
+                num1 = getRandom(2, 9);
+                num2 = getRandom(1, 9);
+                currentCorrectAnswer = num1 * num2;
+                questionStr = `${num1} × ${num2} = ?`;
+                break;
+        }
+
+        questionDisplay.innerText = questionStr;
+        
+        // 針對 iOS 優化：自動將焦點放到輸入框
+        setTimeout(() => { answerInput.focus(); }, 50);
+    }
+
+    // 提交答案
+    function submitAnswer() {
+        const userAnswerRaw = answerInput.value.trim();
+        if (userAnswerRaw === '') return; // 未輸入不反應
+
+        const userAnswer = parseInt(userAnswerRaw, 10);
+        const currentQuestionText = questionDisplay.innerText.replace(' = ?', '');
+
+        // 判斷對錯
+        if (userAnswer === currentCorrectAnswer) {
+            score += 4; // 每題 4 分，25題共 100 分
+        } else {
+            // 紀錄錯題與正確答案
+            wrongQuestionsList.push(`${currentQuestionText} (你的答案: ${userAnswerRaw}，正確答案: ${currentCorrectAnswer})`);
+        }
+
+        // 判斷是否還有下一題
+        if (currentQuestionNum < TOTAL_QUESTIONS) {
+            currentQuestionNum++;
+            generateQuestion();
+        } else {
+            endGame();
+        }
+    }
+
+    // 遊戲結束
+    function endGame() {
+        clearInterval(timerInterval);
+        const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
+
+        // 填入結算資料
+        finalScoreSpan.innerText = score;
+        finalTimeSpan.innerText = elapsedSeconds + ' 秒';
+
+        // 渲染錯題
+        wrongQuestionsContainer.innerHTML = '';
+        if (wrongQuestionsList.length === 0) {
+            wrongQuestionsContainer.innerHTML = '<div style="color:#34c759; font-weight:700;">太厲害了！全對！</div>';
+        } else {
+            wrongQuestionsList.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'wrong-item';
+                div.innerText = item;
+                wrongQuestionsContainer.appendChild(div);
+            });
+        }
+
+        // 切換畫面
+        gameView.classList.add('hidden');
+        resultView.classList.remove('hidden');
+    }
+
+    // 再玩一次
+    function restartGame() {
+        startGame(currentMode);
+    }
+
+    // 回主選單
+    function backToMenu() {
+        resultView.classList.add('hidden');
+        gameView.classList.add('hidden');
+        menuView.removeClassName = 'hidden'; // 相容性處理
+        menuView.classList.remove('hidden');
+    }
+</script>
+
+</body>
+</html>
